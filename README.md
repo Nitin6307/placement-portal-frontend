@@ -1,16 +1,65 @@
-# React + Vite
+# 🎓 Placement Portal — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+> A modern React-based frontend for a full-stack college placement management platform.
 
-Currently, two official plugins are available:
+The Placement Portal frontend provides dedicated interfaces for **students** and **placement officers**, with secure authentication, job management, applications, recommendations, skill-gap analysis, and placement analytics.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## ✨ What This Frontend Does
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+The application provides two main user experiences.
 
-## Expanding the ESLint configuration
+### 👨‍🎓 Student Portal
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Students can:
+
+- Register and log in
+- View and update their profile
+- Upload their resume
+- Browse available jobs
+- Check job eligibility
+- Apply for jobs
+- Track application status
+- View personalized recommendations
+- Analyze skill gaps for jobs
+
+### 👨‍💼 Placement Officer Portal
+
+Officers can:
+
+- Log in securely
+- Manage students
+- Manage companies
+- Create and manage jobs
+- Review applications
+- Update application statuses
+- View placement analytics
+- View application statistics
+
+---
+
+## 🖥️ Application Flow
+
+
+                         Placement Portal
+                                │
+                    ┌───────────┴───────────┐
+                    │                       │
+                👨‍🎓 Student             👨‍💼 Officer
+                    │                       │
+                 Login                   Login
+                    │                       │
+               Dashboard              Dashboard
+                    │                       │
+              Browse Jobs          Manage Students
+                    │              Manage Companies
+              Check Eligibility       Manage Jobs
+                    │                       │
+                 Apply              Manage Applications
+                    │                       │
+            Track Application        View Analytics
+                    │
+          Recommendations
+                    │
+            Skill Gap Analysis
