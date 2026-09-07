@@ -6,6 +6,12 @@ function OfficerDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [skills, setSkills] = useState([]);
+  const [newSkill, setNewSkill] = useState("");
+  const [skillLoading, setSkillLoading] = useState(false);
+  const [skillMessage, setSkillMessage] = useState("");
+
+  // Load Analytics
   useEffect(() => {
     const loadAnalytics = async () => {
       try {
@@ -16,6 +22,7 @@ function OfficerDashboard() {
         setAnalytics(response.data);
       } catch (error) {
         console.error("Analytics API error:", error.response?.data || error);
+
         setError(
           error.response?.data?.error || "Unable to load placement analytics.",
         );
@@ -27,8 +34,52 @@ function OfficerDashboard() {
     loadAnalytics();
   }, []);
 
-  
+  // Load Skills
+  const loadSkills = async () => {
+    try {
+      const response = await api.get("/skills");
+      setSkills(response.data);
+    } catch (error) {
+      console.error("Skills API error:", error);
+    }
+  };
 
+  // Load skills when dashboard opens
+  useEffect(() => {
+    loadSkills();
+  }, []);
+
+  // Create Skill
+  const handleCreateSkill = async () => {
+    const skillName = newSkill.trim();
+
+    if (!skillName) {
+      setSkillMessage("Please enter a skill name.");
+      return;
+    }
+
+    try {
+      setSkillLoading(true);
+      setSkillMessage("");
+
+      const response = await api.post("/skills", {
+        name: skillName,
+      });
+
+      setSkills((prev) => [...prev, response.data]);
+
+      setNewSkill("");
+      setSkillMessage("Skill added successfully.");
+    } catch (error) {
+      console.error("Create skill error:", error);
+
+      setSkillMessage(error.response?.data?.error || "Unable to create skill.");
+    } finally {
+      setSkillLoading(false);
+    }
+  };
+
+  // Dashboard Stats
   const stats = [
     {
       label: "Total Students",
@@ -51,17 +102,15 @@ function OfficerDashboard() {
       icon: "📄",
     },
   ];
-
-
   return (
     <div className="space-y-8">
-    {error && (
-      <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-        {error}
-      </div>
-    )}
+      {error && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
-    {/* Hero */}
+      {/* Hero */}
       {/* Hero */}
       <section className="rounded-3xl bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-700 p-7 text-white shadow-xl md:p-9">
         <p className="text-sm font-medium text-indigo-100">
@@ -201,6 +250,85 @@ function OfficerDashboard() {
               <p className="mt-2 font-semibold text-slate-900">Applications</p>
             </a>
           </div>
+        </div>
+      </section>
+
+      {/* Manage Skills */}
+      <section className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
+        <div>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">
+                Manage Skills
+              </h2>
+            </div>
+
+            <div className="rounded-xl bg-indigo-50 px-4 py-2 text-center">
+              <p className="text-2xl font-bold text-indigo-600">
+                {skills.length}
+              </p>
+
+              <p className="text-xs font-semibold text-indigo-700">
+                Total Skills
+              </p>
+            </div>
+          </div>
+
+          <p className="mt-1 text-sm text-slate-500">
+            Add skills that students can select for job eligibility and
+            recommendations.
+          </p>
+        </div>
+
+        <div className="mt-6 flex flex-col sm:flex-row gap-3">
+          <input
+            type="text"
+            value={newSkill}
+            onChange={(e) => setNewSkill(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleCreateSkill();
+              }
+            }}
+            placeholder="Enter skill name, e.g. Java"
+            className="flex-1 rounded-xl border border-slate-300 px-4 py-3
+                 text-slate-800 outline-none
+                 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+          />
+
+          <button
+            type="button"
+            onClick={handleCreateSkill}
+            disabled={skillLoading}
+            className="rounded-xl bg-indigo-600 px-6 py-3
+                 font-semibold text-white
+                 hover:bg-indigo-700
+                 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {skillLoading ? "Adding..." : "Add Skill"}
+          </button>
+        </div>
+
+        {skillMessage && (
+          <p className="mt-3 text-sm font-medium text-indigo-600">
+            {skillMessage}
+          </p>
+        )}
+
+        <div className="mt-6 flex flex-wrap gap-3">
+          {skills.length > 0 ? (
+            skills.map((skill) => (
+              <span
+                key={skill.id}
+                className="rounded-xl bg-slate-100 px-4 py-2
+                     text-sm font-semibold text-slate-700"
+              >
+                {skill.name}
+              </span>
+            ))
+          ) : (
+            <p className="text-sm text-slate-500">No skills available yet.</p>
+          )}
         </div>
       </section>
 

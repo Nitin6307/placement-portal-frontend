@@ -10,6 +10,37 @@ function StudentProfile() {
   const [message, setMessage] = useState("");
   const [resumeFile, setResumeFile] = useState(null);
   const [uploadingResume, setUploadingResume] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [allSkills, setAllSkills] = useState([]);
+  const [selectedSkill, setSelectedSkill] = useState("");
+  const [skillLoading, setSkillLoading] = useState(false);
+
+  const handleCreate = async () => {
+    try {
+      setCreating(true);
+      setMessage("");
+
+      const response = await api.post("/students", {
+        name: profile.name,
+        email: profile.email,
+        branch: profile.branch,
+        cgpa: profile.cgpa,
+        backlogs: profile.backlogs,
+        graduationYear: profile.graduationYear,
+        phone: profile.phone,
+        resumeUrl: profile.resumeUrl || null,
+      });
+
+      setProfile(response.data);
+      setMessage("Profile created successfully.");
+    } catch (error) {
+      console.error(error);
+
+      setMessage(error.response?.data?.error || "Unable to create profile.");
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const handleSave = async () => {
     try {
@@ -67,6 +98,7 @@ function StudentProfile() {
 
   useEffect(() => {
     loadProfile();
+    loadSkills();
   }, []);
 
   const loadProfile = async () => {
@@ -75,8 +107,68 @@ function StudentProfile() {
       setProfile(data);
     } catch (error) {
       console.error("Failed to load profile:", error);
+
+      if (error.response?.status === 404) {
+        setProfile({
+          name: "",
+          email: "",
+          branch: "",
+          cgpa: "",
+          backlogs: 0,
+          graduationYear: "",
+          phone: "",
+          resumeUrl: "",
+        });
+        setEditing(true);
+      }
     } finally {
       setLoading(false);
+    }
+  };
+  const loadSkills = async () => {
+    try {
+      const response = await api.get("/skills");
+      console.log("Skills response:", response.data);
+      setAllSkills(response.data);
+    } catch (error) {
+      console.error("Skills API error:", error.response?.data || error);
+    }
+  };
+
+  const handleAddSkill = async () => {
+    if (!selectedSkill) return;
+
+    try {
+      setSkillLoading(true);
+      setMessage("");
+
+      const response = await api.post(`/students/me/skills/${selectedSkill}`);
+
+      setProfile(response.data);
+      setSelectedSkill("");
+      setMessage("Skill added successfully.");
+    } catch (error) {
+      console.error(error);
+      setMessage(error.response?.data?.error || "Unable to add skill.");
+    } finally {
+      setSkillLoading(false);
+    }
+  };
+
+  const handleRemoveSkill = async (skillId) => {
+    try {
+      setSkillLoading(true);
+      setMessage("");
+
+      const response = await api.delete(`/students/me/skills/${skillId}`);
+
+      setProfile(response.data);
+      setMessage("Skill removed successfully.");
+    } catch (error) {
+      console.error(error);
+      setMessage(error.response?.data?.error || "Unable to remove skill.");
+    } finally {
+      setSkillLoading(false);
     }
   };
 
@@ -84,16 +176,19 @@ function StudentProfile() {
     try {
       const token = localStorage.getItem("token");
 
-      const response = await api.get(profile.resumeUrl, {
+      const resumePath = new URL(profile.resumeUrl).pathname.replace(
+        "/api",
+        "",
+      );
+
+      const response = await api.get(resumePath, {
         responseType: "blob",
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      const pdfUrl = window.URL.createObjectURL(
-        new Blob([response.data], { type: "application/pdf" }),
-      );
+      const pdfUrl = window.URL.createObjectURL(response.data);
 
       window.open(pdfUrl, "_blank");
 
@@ -102,7 +197,7 @@ function StudentProfile() {
       }, 60000);
     } catch (error) {
       console.error("Failed to open resume:", error);
-      setMessage("Unable to open resume.");
+      setMessage(error.response?.data?.error || "Unable to open resume.");
     }
   };
 
@@ -110,20 +205,6 @@ function StudentProfile() {
     return (
       <div className="flex items-center justify-center py-24">
         <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (!profile) {
-    return (
-      <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center">
-        <div className="text-5xl mb-4">👤</div>
-
-        <h2 className="text-xl font-bold text-slate-800">Profile not found</h2>
-
-        <p className="text-slate-500 mt-2">
-          Your student profile has not been created yet.
-        </p>
       </div>
     );
   }
@@ -259,11 +340,17 @@ function StudentProfile() {
 
           <div className="flex justify-end mt-6">
             <button
-              onClick={handleSave}
+              onClick={profile.id ? handleSave : handleCreate}
               disabled={saving}
               className="px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-60 transition"
             >
-              {saving ? "Saving..." : "Save Changes"}
+              {creating
+                ? "Creating..."
+                : saving
+                  ? "Saving..."
+                  : profile.id
+                    ? "Save Changes"
+                    : "Create Profile"}
             </button>
           </div>
         </section>
@@ -330,7 +417,7 @@ function StudentProfile() {
             <h2 className="text-xl font-bold text-slate-800">Skills</h2>
 
             <p className="text-sm text-slate-500 mt-1">
-              Skills used for job recommendations and matching.
+              Add your technical skills for job eligibility and recommendations.
             </p>
           </div>
 
@@ -339,15 +426,52 @@ function StudentProfile() {
           </span>
         </div>
 
+        {/* Add Skill */}
+        <div className="flex flex-col sm:flex-row gap-3 mt-6">
+          <select
+            value={selectedSkill}
+            onChange={(e) => setSelectedSkill(e.target.value)}
+            className="w-full rounded-xl border border-slate-300 px-4 py-3"
+          >
+            <option value="">Select a skill</option>
+
+            {allSkills.map((skill) => (
+              <option key={skill.id} value={skill.id}>
+                {skill.name}
+              </option>
+            ))}
+          </select>
+
+          <button
+            type="button"
+            onClick={handleAddSkill}
+            disabled={!selectedSkill || skillLoading || !profile.id}
+            className="px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {skillLoading ? "Updating..." : "Add Skill"}
+          </button>
+        </div>
+
+        {/* Current Skills */}
         <div className="flex flex-wrap gap-3 mt-6">
           {profile.skills?.length > 0 ? (
             profile.skills.map((skill) => (
-              <span
+              <div
                 key={skill.id}
-                className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-medium"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-medium"
               >
-                {skill.name}
-              </span>
+                <span>{skill.name}</span>
+
+                <button
+                  type="button"
+                  onClick={() => handleRemoveSkill(skill.id)}
+                  disabled={skillLoading}
+                  className="text-slate-400 hover:text-red-600 font-bold"
+                  title={`Remove ${skill.name}`}
+                >
+                  ×
+                </button>
+              </div>
             ))
           ) : (
             <p className="text-slate-500">No skills added yet.</p>
